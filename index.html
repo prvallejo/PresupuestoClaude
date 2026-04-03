@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ObraDigital · Presupuesto de Obra Chile</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a2e4a;--navy2:#243a5e;--blue:#2d6bcd;--lblue:#d6e4f7;
+  --accent:#e8a020;--text:#1e2b3c;--muted:#6b7a8d;--border:#c8d6e8;
+  --bg:#f4f7fb;--white:#fff;--red:#c0392b;--green:#2d7a5a;--lgreen:#d4ede3;
+}
+html{font-size:15px}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* TOP BAR */
+#topbar{background:var(--navy);color:#fff;padding:0 20px;display:flex;align-items:center;gap:12px;height:52px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+#topbar h1{font-size:.95rem;font-weight:600;letter-spacing:.5px;flex:1}
+#topbar button{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:.82rem;font-weight:700;cursor:pointer;transition:opacity .15s}
+#topbar button:hover{opacity:.85}
+#topbar button.sec{background:transparent;border:1.5px solid rgba(255,255,255,.35);color:#fff;font-weight:500}
+
+/* TABS */
+#tabs{background:var(--navy2);display:flex;gap:2px;padding:0 20px;overflow-x:auto}
+.tab{padding:9px 18px;color:rgba(255,255,255,.6);font-size:.82rem;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s}
+.tab.active{color:#fff;border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:rgba(255,255,255,.9)}
+
+/* PAGES */
+.page{display:none;padding:20px;max-width:1100px;margin:0 auto}
+.page.active{display:block}
+
+/* CARD */
+.card{background:var(--white);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:20px 24px;margin-bottom:16px}
+.card h2{font-size:.9rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;border-bottom:2px solid var(--lblue);padding-bottom:6px}
+
+/* FORM */
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.fgrid.three{grid-template-columns:1fr 1fr 1fr}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.field input,.field textarea,.field select{border:1.5px solid var(--border);border-radius:6px;padding:7px 10px;font-size:.88rem;color:var(--text);background:#fff;transition:border-color .15s;font-family:inherit}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--blue)}
+.field textarea{resize:vertical;min-height:70px}
+
+/* LOGO / PORTADA */
+#logo-wrap{width:90px;height:90px;border:2px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;background:var(--bg);flex-shrink:0}
+#logo-wrap img{width:100%;height:100%;object-fit:contain}
+#logo-wrap span{font-size:.72rem;color:var(--muted);text-align:center;padding:8px}
+#logo-inp,#portada-inp{display:none}
+#portada-wrap{width:100%;height:140px;border:2px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;background:var(--bg)}
+#portada-wrap img{width:100%;height:100%;object-fit:cover}
+#portada-wrap span{font-size:.82rem;color:var(--muted)}
+.quitar-btn{margin-top:6px;font-size:.72rem;background:none;border:none;color:var(--red);cursor:pointer}
+
+/* PARTIDAS */
+.partida-block{border:1.5px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden}
+.partida-hdr{background:var(--lblue);display:flex;align-items:center;gap:8px;padding:8px 12px}
+.partida-hdr input{flex:1;border:none;background:transparent;font-size:.9rem;font-weight:700;color:var(--navy);outline:none;font-family:inherit}
+.partida-hdr input::placeholder{color:#8fa0b5;font-weight:400}
+.num-badge{background:var(--navy);color:#fff;font-size:.72rem;font-weight:700;border-radius:4px;padding:2px 7px;white-space:nowrap}
+.total-partida{font-size:.82rem;font-weight:700;color:var(--navy);white-space:nowrap}
+.del-btn{background:var(--red);color:#fff;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
+
+.subpartidas-table{width:100%;border-collapse:collapse}
+.subpartidas-table th{background:var(--navy);color:#fff;font-size:.72rem;font-weight:700;padding:6px 8px;text-align:left;letter-spacing:.3px}
+.subpartidas-table td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+.subpartidas-table tr:last-child td{border-bottom:none}
+.subpartidas-table tr:nth-child(even) td{background:#f8fafd}
+.subpartidas-table input,.subpartidas-table select{border:1px solid transparent;background:transparent;padding:4px 6px;font-size:.84rem;color:var(--text);width:100%;font-family:inherit;border-radius:4px}
+.subpartidas-table input:focus,.subpartidas-table select:focus{outline:none;border-color:var(--blue);background:#fff}
+.subpartidas-table .num-inp{text-align:right}
+.subpartidas-table .total-cell{font-weight:600;color:var(--navy);text-align:right;white-space:nowrap;font-size:.84rem;padding-right:10px}
+.del-sub{background:none;border:none;color:var(--red);cursor:pointer;font-size:.9rem;padding:0 4px}
+.add-sub-btn{background:none;border:1.5px dashed var(--blue);color:var(--blue);border-radius:6px;padding:5px 14px;font-size:.78rem;font-weight:600;cursor:pointer;margin:8px;transition:background .15s}
+.add-sub-btn:hover{background:var(--lblue)}
+
+/* TOTALES */
+.totales-box{background:var(--navy);color:#fff;border-radius:8px;padding:16px 20px;margin-top:4px}
+.totales-box .row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:.88rem}
+.totales-box .row.big{font-size:1.05rem;font-weight:800;border-top:1.5px solid rgba(255,255,255,.25);margin-top:6px;padding-top:10px}
+.totales-box .row .label{opacity:.8}
+.totales-box .row .val{font-weight:700;font-variant-numeric:tabular-nums}
+.gg-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:.88rem;color:rgba(255,255,255,.9)}
+.gg-row label{opacity:.8;white-space:nowrap}
+.gg-row input{width:70px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:5px;padding:4px 8px;font-size:.88rem;text-align:right;font-family:inherit}
+.gg-row input:focus{outline:none;background:rgba(255,255,255,.2)}
+.gg-row span{opacity:.7;font-size:.82rem}
+#son-text{font-size:.78rem;color:var(--muted);font-style:italic;margin-top:4px}
+
+/* APU */
+.apu-block{border:1.5px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.apu-hdr{background:var(--navy);color:#fff;display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.88rem;font-weight:700}
+.apu-hdr input{background:transparent;border:none;color:#fff;font-weight:700;font-family:inherit;font-size:.88rem;outline:none;flex:1}
+.apu-hdr input::placeholder{color:rgba(255,255,255,.4);font-weight:400}
+.apu-id{opacity:.6;font-size:.75rem;font-weight:400}
+.del-apu{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
+.apu-table{width:100%;border-collapse:collapse}
+.apu-table th{background:var(--lblue);color:var(--navy);font-size:.72rem;font-weight:700;padding:5px 8px;text-align:left}
+.apu-table td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+.apu-table input,.apu-table select{border:1px solid transparent;background:transparent;padding:4px 6px;font-size:.84rem;color:var(--text);width:100%;font-family:inherit;border-radius:4px}
+.apu-table input:focus,.apu-table select:focus{outline:none;border-color:var(--blue);background:#fff}
+.apu-table .num-inp{text-align:right}
+.apu-table .sub-cell{text-align:right;font-weight:600;color:var(--navy);white-space:nowrap}
+.apu-footer{background:#f8fafd;padding:8px 14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:.82rem;border-top:1px solid var(--border)}
+.apu-ls{display:flex;align-items:center;gap:6px}
+.apu-ls label{color:var(--muted);font-weight:600}
+.apu-ls input{width:60px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:.82rem;text-align:right;font-family:inherit}
+.apu-pu{margin-left:auto;font-weight:800;color:var(--navy);font-size:.9rem}
+.apu-link{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted);padding:5px 14px;border-top:1px solid var(--border);background:#fafcff}
+.apu-link select,.apu-link input{border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:.8rem;font-family:inherit;color:var(--text)}
+
+/* CUBICACIONES */
+.cub-block{border:1.5px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.cub-hdr{background:var(--green);color:#fff;display:flex;align-items:center;gap:10px;padding:9px 14px}
+.cub-hdr input{flex:1;background:transparent;border:none;color:#fff;font-size:.9rem;font-weight:700;font-family:inherit;outline:none}
+.cub-hdr input::placeholder{color:rgba(255,255,255,.5);font-weight:400}
+.del-cub{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
+.cub-table{width:100%;border-collapse:collapse}
+.cub-table th{background:var(--lgreen);color:#1a4a35;font-size:.72rem;font-weight:700;padding:5px 8px;text-align:left}
+.cub-table td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+.cub-table input,.cub-table select{border:1px solid transparent;background:transparent;padding:4px 6px;font-size:.84rem;color:var(--text);width:100%;font-family:inherit;border-radius:4px}
+.cub-table input:focus,.cub-table select:focus{outline:none;border-color:var(--green);background:#fff}
+.cub-table .num-inp{text-align:right}
+.cub-table .total-cell{text-align:right;font-weight:600;color:#1a4a35}
+.cub-footer{background:#f0faf6;padding:8px 14px;font-size:.82rem;color:#1a4a35;font-weight:700;display:flex;justify-content:flex-end;gap:16px;border-top:1px solid #b5dcc8}
+
+/* BOTONES */
+.add-btn{display:flex;align-items:center;gap:8px;background:var(--blue);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:.84rem;font-weight:700;cursor:pointer;transition:opacity .15s;margin-bottom:10px}
+.add-btn:hover{opacity:.88}
+.add-btn.green{background:var(--green)}
+
+/* FIRMAS */
+.firma-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:10px}
+.firma-box{border:1.5px solid var(--border);border-radius:8px;padding:16px}
+.firma-box h3{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+
+/* EXPORTAR */
+#resumen-panel{background:var(--white);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:20px 24px;margin-bottom:16px}
+#resumen-panel h2{font-size:.9rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.check-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--lblue);font-size:.85rem}
+.check-row:last-child{border-bottom:none}
+.check-row input[type=checkbox]{width:16px;height:16px;cursor:pointer}
+.check-row label{color:var(--text);cursor:pointer;flex:1}
+.check-row .badge{font-size:.72rem;background:var(--lblue);color:var(--navy);border-radius:4px;padding:2px 7px;font-weight:700}
+
+/* NOTIF */
+#notif{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 20px;border-radius:8px;font-size:.84rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.3);transform:translateY(60px);opacity:0;transition:all .25s;z-index:999}
+#notif.show{transform:translateY(0);opacity:1}
+
+/* HIGHLIGHT pérdidas */
+.perdidas-row td{background:#fff8e1 !important}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>🏗️ ObraDigital · Presupuesto de Obra</h1>
+  <button class="sec" onclick="nuevoProyecto()">+ Nuevo proyecto</button>
+  <button onclick="generarPDF()">⬇ Generar PDF</button>
+</div>
+
+<div id="tabs">
+  <div class="tab active"   onclick="showTab('tab-empresa')">Empresa</div>
+  <div class="tab"          onclick="showTab('tab-proyecto')">Proyecto</div>
+  <div class="tab"          onclick="showTab('tab-presupuesto')">Presupuesto</div>
+  <div class="tab"          onclick="showTab('tab-apu')">APU</div>
+  <div class="tab"          onclick="showTab('tab-cubicaciones')">Cubicaciones</div>
+  <div class="tab"          onclick="showTab('tab-firmas')">Firmas</div>
+  <div class="tab"          onclick="showTab('tab-exportar')">Exportar PDF</div>
+</div>
+
+<!-- ══ EMPRESA ══ -->
+<div class="page active" id="tab-empresa">
+  <div class="card">
+    <h2>Datos de Empresa (se mantienen entre proyectos)</h2>
+    <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+      <div>
+        <div id="logo-wrap" onclick="document.getElementById('logo-inp').click()">
+          <img id="logo-preview" src="" style="display:none">
+          <span id="logo-placeholder">Click<br>para logo</span>
+        </div>
+        <input type="file" id="logo-inp" accept="image/*" onchange="cargarLogo(event)">
+        <button class="quitar-btn" onclick="quitarLogo()">✕ Quitar logo</button>
+      </div>
+      <div class="fgrid" style="flex:1;min-width:260px">
+        <div class="field"><label>Nombre empresa</label><input id="e-nombre" placeholder="Constructora Ejemplo Ltda."></div>
+        <div class="field"><label>RUT empresa</label><input id="e-rut" placeholder="76.123.456-7"></div>
+        <div class="field"><label>Giro</label><input id="e-giro" placeholder="Construcción Civil · Chile"></div>
+        <div class="field"><label>Dirección</label><input id="e-dir" placeholder="Av. Principal 123, Santiago"></div>
+        <div class="field"><label>Teléfono</label><input id="e-tel" placeholder="+56 9 1234 5678"></div>
+        <div class="field"><label>Email</label><input id="e-email" placeholder="contacto@empresa.cl"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PROYECTO ══ -->
+<div class="page" id="tab-proyecto">
+  <div class="card">
+    <h2>Foto de portada</h2>
+    <div id="portada-wrap" onclick="document.getElementById('portada-inp').click()">
+      <img id="portada-preview" src="" style="display:none">
+      <span id="portada-placeholder">Click para subir foto de portada del proyecto</span>
+    </div>
+    <input type="file" id="portada-inp" accept="image/*" onchange="cargarPortada(event)">
+    <button class="quitar-btn" onclick="quitarPortada()">✕ Quitar portada</button>
+  </div>
+  <div class="card">
+    <h2>Datos del Proyecto</h2>
+    <div class="fgrid three">
+      <div class="field"><label>Nombre del proyecto</label><input id="p-nombre" placeholder="Construcción Casa Habitación"></div>
+      <div class="field"><label>Mandante</label><input id="p-mandante" placeholder="Juan Pérez González"></div>
+      <div class="field"><label>Ubicación</label><input id="p-ubicacion" placeholder="Las Condes, Santiago"></div>
+      <div class="field"><label>Fecha</label><input id="p-fecha" type="date"></div>
+      <div class="field"><label>N° Presupuesto</label><input id="p-num" placeholder="2026-001"></div>
+      <div class="field"><label>Plazo estimado</label><input id="p-plazo" placeholder="120 días corridos"></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label>Descripción / alcance</label><textarea id="p-desc" placeholder="Descripción general del proyecto..."></textarea></div>
+  </div>
+</div>
+
+<!-- ══ PRESUPUESTO ══ -->
+<div class="page" id="tab-presupuesto">
+  <div class="card">
+    <h2>Partidas del Presupuesto</h2>
+    <button class="add-btn" onclick="addPartida()">+ Agregar Partida</button>
+    <div id="partidas-container"></div>
+  </div>
+  <div class="card">
+    <h2>Resumen de Costos</h2>
+    <div class="totales-box">
+      <div class="row"><span class="label">Costo Directo</span><span class="val" id="t-costo-directo">$ 0</span></div>
+      <div class="gg-row">
+        <label>Gastos Generales</label>
+        <input id="gg-pct" type="number" value="0" min="0" max="100" step="0.1" oninput="recalcTotales()"> %
+        <span id="t-gg-val">($ 0)</span>
+      </div>
+      <div class="gg-row">
+        <label>Utilidad</label>
+        <input id="util-pct" type="number" value="12" min="0" max="100" step="0.1" oninput="recalcTotales()"> %
+        <span id="t-util-val">($ 0)</span>
+      </div>
+      <div class="row"><span class="label">Total Neto</span><span class="val" id="t-neto">$ 0</span></div>
+      <div class="row"><span class="label">IVA (19%)</span><span class="val" id="t-iva">$ 0</span></div>
+      <div class="row big"><span class="label">TOTAL GENERAL</span><span class="val" id="t-total">$ 0</span></div>
+    </div>
+    <p id="son-text">Son: —</p>
+  </div>
+</div>
+
+<!-- ══ APU ══ -->
+<div class="page" id="tab-apu">
+  <div class="card">
+    <h2>Análisis de Precios Unitarios</h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Cada APU se imprime en hoja independiente.</p>
+    <button class="add-btn" onclick="addAPU()">+ Agregar APU</button>
+    <div id="apu-container"></div>
+  </div>
+</div>
+
+<!-- ══ CUBICACIONES ══ -->
+<div class="page" id="tab-cubicaciones">
+  <div class="card">
+    <h2>Cubicaciones / Mediciones</h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Se imprimen en hojas independientes al presupuesto y APU.</p>
+    <button class="add-btn green" onclick="addCubicacion()">+ Agregar Cubicación</button>
+    <div id="cub-container"></div>
+  </div>
+</div>
+
+<!-- ══ FIRMAS ══ -->
+<div class="page" id="tab-firmas">
+  <div class="card">
+    <h2>Datos para Firmas (última hoja del informe)</h2>
+    <div class="firma-grid">
+      <div class="firma-box">
+        <h3>Representante Legal</h3>
+        <div class="fgrid" style="grid-template-columns:1fr">
+          <div class="field"><label>Nombre completo</label><input id="f-rl-nombre" placeholder="Pedro González Silva"></div>
+          <div class="field"><label>RUT</label><input id="f-rl-rut" placeholder="12.345.678-9"></div>
+          <div class="field"><label>Cargo</label><input id="f-rl-cargo" placeholder="Representante Legal"></div>
+        </div>
+      </div>
+      <div class="firma-box">
+        <h3>Profesional a Cargo</h3>
+        <div class="fgrid" style="grid-template-columns:1fr">
+          <div class="field"><label>Nombre completo</label><input id="f-pc-nombre" placeholder="Ing. María López Torres"></div>
+          <div class="field"><label>RUT</label><input id="f-pc-rut" placeholder="9.876.543-2"></div>
+          <div class="field"><label>Título / Especialidad</label><input id="f-pc-titulo" placeholder="Constructor Civil"></div>
+        </div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:14px"><label>Notas / Condiciones</label><textarea id="f-notas" placeholder="Validez del presupuesto: 30 días. Forma de pago: 30% anticipo..."></textarea></div>
+  </div>
+</div>
+
+<!-- ══ EXPORTAR ══ -->
+<div class="page" id="tab-exportar">
+  <div id="resumen-panel">
+    <h2>Secciones a incluir en el PDF</h2>
+    <div class="check-row">
+      <input type="checkbox" id="inc-portada" checked>
+      <label for="inc-portada">Portada del proyecto</label>
+      <span class="badge">Hoja 1</span>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="inc-presupuesto" checked>
+      <label for="inc-presupuesto">Tabla de presupuesto</label>
+      <span class="badge">Hoja independiente</span>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="inc-apu" checked>
+      <label for="inc-apu" id="lbl-apu">APU</label>
+      <span class="badge">Hojas independientes</span>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="inc-cubicaciones" checked>
+      <label for="inc-cubicaciones" id="lbl-cub">Cubicaciones</label>
+      <span class="badge">Hojas independientes</span>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="inc-firmas" checked>
+      <label for="inc-firmas">Hoja de firmas</label>
+      <span class="badge">Última hoja</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Resumen del proyecto</h2>
+    <div id="resumen-datos" style="font-size:.85rem;line-height:1.8"></div>
+  </div>
+  <button class="add-btn" style="width:100%;justify-content:center;padding:14px" onclick="generarPDF()">
+    ⬇ Generar e imprimir PDF completo
+  </button>
+</div>
+
+<div id="notif"></div>
+
+<script>
+/* ══════════════════════════════════════════
+   CONSTANTES
+══════════════════════════════════════════ */
+// Selects de unidades
+const UNID_PARTIDA = ['cu','gl','m³','m²','m','kg','ton','lt','ml'];
+const UNID_APU     = ['hh','hr','plg','placha','lts','saco','cu','gl','m³','m²','m','kg','ton','%'];
+
+function mkSelect(opts, val='', cls='') {
+  let s = `<select class="${cls}">`;
+  opts.forEach(o => { s += `<option value="${o}"${o===val?' selected':''}>${o}</option>`; });
+  s += '</select>';
+  return s;
+}
+
+/* ══════════════════════════════════════════
+   ESTADO
+══════════════════════════════════════════ */
+let partidaIdx=0, apuIdx=0, cubIdx=0, subIdx=0, apuRowIdx=0, cubRowIdx=0;
+let logoDataURL='', portadaDataURL='';
+
+/* ══════════════════════════════════════════
+   TABS
+══════════════════════════════════════════ */
+const TABS=['tab-empresa','tab-proyecto','tab-presupuesto','tab-apu','tab-cubicaciones','tab-firmas','tab-exportar'];
+function showTab(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab')[TABS.indexOf(id)].classList.add('active');
+  if(id==='tab-exportar') actualizarResumenExportar();
+}
+
+/* ══════════════════════════════════════════
+   LOGO / PORTADA
+══════════════════════════════════════════ */
+function cargarLogo(e){
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    logoDataURL=ev.target.result;
+    document.getElementById('logo-preview').src=logoDataURL;
+    document.getElementById('logo-preview').style.display='block';
+    document.getElementById('logo-placeholder').style.display='none';
+    guardarEmpresa();
+  };
+  r.readAsDataURL(f);
+}
+function quitarLogo(){
+  logoDataURL='';
+  document.getElementById('logo-preview').src='';
+  document.getElementById('logo-preview').style.display='none';
+  document.getElementById('logo-placeholder').style.display='';
+  document.getElementById('logo-inp').value='';
+  guardarEmpresa();
+}
+function cargarPortada(e){
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    portadaDataURL=ev.target.result;
+    document.getElementById('portada-preview').src=portadaDataURL;
+    document.getElementById('portada-preview').style.display='block';
+    document.getElementById('portada-placeholder').style.display='none';
+  };
+  r.readAsDataURL(f);
+}
+function quitarPortada(){
+  portadaDataURL='';
+  document.getElementById('portada-preview').src='';
+  document.getElementById('portada-preview').style.display='none';
+  document.getElementById('portada-placeholder').style.display='';
+  document.getElementById('portada-inp').value='';
+}
+
+/* ══════════════════════════════════════════
+   EMPRESA (localStorage)
+══════════════════════════════════════════ */
+const EMP_IDS=['e-nombre','e-rut','e-giro','e-dir','e-tel','e-email'];
+function guardarEmpresa(){
+  const d={};
+  EMP_IDS.forEach(id=>d[id]=document.getElementById(id).value);
+  d.logo=logoDataURL;
+  localStorage.setItem('obra_empresa',JSON.stringify(d));
+}
+function cargarEmpresa(){
+  const raw=localStorage.getItem('obra_empresa'); if(!raw)return;
+  const d=JSON.parse(raw);
+  EMP_IDS.forEach(id=>{ if(d[id]) document.getElementById(id).value=d[id]; });
+  if(d.logo){
+    logoDataURL=d.logo;
+    document.getElementById('logo-preview').src=logoDataURL;
+    document.getElementById('logo-preview').style.display='block';
+    document.getElementById('logo-placeholder').style.display='none';
+  }
+}
+EMP_IDS.forEach(id=>document.getElementById(id).addEventListener('input',guardarEmpresa));
+
+/* ══════════════════════════════════════════
+   NUEVO PROYECTO (fix #9: mantiene empresa+logo)
+══════════════════════════════════════════ */
+function nuevoProyecto(){
+  if(!confirm('¿Crear nuevo proyecto?\nEmpresa y logo se mantienen. El resto se borra.'))return;
+  ['p-nombre','p-mandante','p-ubicacion','p-num','p-plazo','p-desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-fecha').value=new Date().toISOString().slice(0,10);
+  quitarPortada();
+  document.getElementById('partidas-container').innerHTML=''; partidaIdx=0; subIdx=0;
+  document.getElementById('apu-container').innerHTML=''; apuIdx=0; apuRowIdx=0;
+  document.getElementById('cub-container').innerHTML=''; cubIdx=0; cubRowIdx=0;
+  ['f-rl-nombre','f-rl-rut','f-rl-cargo','f-pc-nombre','f-pc-rut','f-pc-titulo','f-notas'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('gg-pct').value=0;
+  document.getElementById('util-pct').value=12;
+  recalcTotales();
+  showTab('tab-proyecto');
+  notify('Nuevo proyecto creado ✓');
+}
+
+/* ══════════════════════════════════════════
+   FORMATEO NÚMEROS (fix #2)
+══════════════════════════════════════════ */
+function fmtCLP(n){
+  if(!n&&n!==0)return '$ 0';
+  return '$ '+Math.round(n).toLocaleString('es-CL');
+}
+function fmtNum(n){
+  if(!n&&n!==0)return '0';
+  return n.toLocaleString('es-CL',{maximumFractionDigits:4});
+}
+
+/* ══════════════════════════════════════════
+   DETECCIÓN DE PÉRDIDAS (fix #5)
+══════════════════════════════════════════ */
+function esPerdida(str){
+  return /p[eé]rdida[s]?/i.test((str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''));
+}
+
+/* ══════════════════════════════════════════
+   PARTIDAS (fix #3 – select unidades)
+══════════════════════════════════════════ */
+function addPartida(desc=''){
+  const idx=++partidaIdx;
+  const cont=document.getElementById('partidas-container');
+  const div=document.createElement('div');
+  div.className='partida-block'; div.id=`partida-${idx}`;
+  div.innerHTML=`
+    <div class="partida-hdr">
+      <span class="num-badge">${idx}.-</span>
+      <input type="text" placeholder="Nombre de la partida" value="${desc}"
+        id="p-desc-${idx}" oninput="updateAPULinks()">
+      <span class="total-partida" id="ptotal-${idx}">$ 0</span>
+      <button class="del-btn" onclick="delPartida(${idx})">✕</button>
+    </div>
+    <table class="subpartidas-table">
+      <thead><tr>
+        <th style="width:48px">N°</th>
+        <th>Descripción</th>
+        <th style="width:80px">Unid.</th>
+        <th style="width:90px">Cantidad</th>
+        <th style="width:110px">P. Unitario</th>
+        <th style="width:120px">Total</th>
+        <th style="width:28px"></th>
+      </tr></thead>
+      <tbody id="subs-${idx}"></tbody>
+    </table>
+    <button class="add-sub-btn" onclick="addSub(${idx})">+ Agregar subpartida</button>`;
+  cont.appendChild(div);
+  addSub(idx);
+  updateAPULinks();
+}
+function delPartida(idx){
+  document.getElementById(`partida-${idx}`)?.remove();
+  recalcTotales(); updateAPULinks();
+}
+function addSub(pId){
+  const si=++subIdx;
+  const tbody=document.getElementById(`subs-${pId}`);
+  const rowNum=tbody.rows.length+1;
+  const tr=document.createElement('tr'); tr.id=`sub-${si}`;
+  tr.innerHTML=`
+    <td style="text-align:center;color:var(--muted);font-size:.78rem">${pId}.${rowNum}</td>
+    <td><input type="text" placeholder="Descripción de la subpartida"></td>
+    <td>${mkSelect(UNID_PARTIDA,'m²')}</td>
+    <td><input type="number" class="num-inp" placeholder="0" min="0" step="any"
+      oninput="recalcSub(${si},${pId})"></td>
+    <td><input type="number" class="num-inp" placeholder="0" min="0" step="any"
+      oninput="recalcSub(${si},${pId})"></td>
+    <td class="total-cell" id="sub-total-${si}">$ 0</td>
+    <td><button class="del-sub" onclick="delSub(${si},${pId})">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+function delSub(si,pId){
+  document.getElementById(`sub-${si}`)?.remove();
+  recalcPartida(pId); recalcTotales();
+}
+function recalcSub(si,pId){
+  const tr=document.getElementById(`sub-${si}`); if(!tr)return;
+  const ins=tr.querySelectorAll('input[type=number]');
+  const tot=(parseFloat(ins[0].value)||0)*(parseFloat(ins[1].value)||0);
+  document.getElementById(`sub-total-${si}`).textContent=fmtCLP(tot);
+  recalcPartida(pId); recalcTotales();
+}
+function recalcPartida(pId){
+  const tbody=document.getElementById(`subs-${pId}`); if(!tbody)return 0;
+  let total=0;
+  tbody.querySelectorAll('tr').forEach(tr=>{
+    const ins=tr.querySelectorAll('input[type=number]');
+    if(ins.length>=2) total+=(parseFloat(ins[0].value)||0)*(parseFloat(ins[1].value)||0);
+  });
+  const el=document.getElementById(`ptotal-${pId}`);
+  if(el)el.textContent=fmtCLP(total);
+  return total;
+}
+function recalcTotales(){
+  let costo=0;
+  document.querySelectorAll('.partida-block').forEach(pb=>{
+    const m=pb.id.match(/partida-(\d+)/);
+    if(m) costo+=recalcPartida(parseInt(m[1]))||0;
+  });
+  const ggPct=parseFloat(document.getElementById('gg-pct').value)||0;
+  const utPct=parseFloat(document.getElementById('util-pct').value)||0;
+  const gg=costo*ggPct/100;
+  const base=costo+gg;
+  const util=base*utPct/100;
+  const neto=base+util;
+  const iva=neto*0.19;
+  const total=neto+iva;
+  document.getElementById('t-costo-directo').textContent=fmtCLP(costo);
+  document.getElementById('t-gg-val').textContent='('+fmtCLP(gg)+')';
+  document.getElementById('t-util-val').textContent='('+fmtCLP(util)+')';
+  document.getElementById('t-neto').textContent=fmtCLP(neto);
+  document.getElementById('t-iva').textContent=fmtCLP(iva);
+  document.getElementById('t-total').textContent=fmtCLP(total);
+  document.getElementById('son-text').textContent='Son: '+numeroALetras(Math.round(total))+' pesos.-';
+}
+
+/* ══════════════════════════════════════════
+   APU (fix #4 – selects; fix #5 – pérdidas)
+══════════════════════════════════════════ */
+function getPartidaOptions(){
+  let o='<option value="">— Sin vincular —</option>';
+  document.querySelectorAll('.partida-block').forEach(pb=>{
+    const m=pb.id.match(/partida-(\d+)/); if(!m)return;
+    const id=m[1];
+    const desc=document.getElementById(`p-desc-${id}`)?.value||`Partida ${id}`;
+    o+=`<option value="${id}">${id}.- ${desc}</option>`;
+  });
+  return o;
+}
+function addAPU(desc=''){
+  const idx=++apuIdx;
+  const cont=document.getElementById('apu-container');
+  const div=document.createElement('div');
+  div.className='apu-block'; div.id=`apu-${idx}`;
+  div.innerHTML=`
+    <div class="apu-hdr">
+      <input type="text" placeholder="Nombre del APU" value="${desc}">
+      <span class="apu-id">APU ${idx}</span>
+      <button class="del-apu" onclick="delAPU(${idx})">✕</button>
+    </div>
+    <div class="apu-link">
+      <span>Vinculado a:</span>
+      <select id="apu-link-${idx}">${getPartidaOptions()}</select>
+      <span style="margin-left:8px;color:var(--muted)">Unidad resultado:</span>
+      <select id="apu-runid-${idx}" onchange="document.getElementById('apu-unid-lbl-${idx}').textContent=this.value">
+        ${UNID_APU.map(u=>`<option${u==='m³'?' selected':''}>${u}</option>`).join('')}
+      </select>
+    </div>
+    <table class="apu-table">
+      <thead><tr>
+        <th>Recurso</th>
+        <th style="width:115px">Tipo</th>
+        <th style="width:75px">Unid.</th>
+        <th style="width:85px">Rend./Cant.</th>
+        <th style="width:110px">P.U.</th>
+        <th style="width:110px">Subtotal</th>
+        <th style="width:28px"></th>
+      </tr></thead>
+      <tbody id="apu-body-${idx}"></tbody>
+    </table>
+    <div class="apu-footer">
+      <div class="apu-ls">
+        <label>Leyes Sociales</label>
+        <input type="number" id="apu-ls-${idx}" value="23.3" min="0" max="100" step="0.1"
+          oninput="recalcAPU(${idx})"> %
+      </div>
+      <button class="add-sub-btn" style="margin:0" onclick="addAPURow(${idx})">+ Recurso</button>
+      <div class="apu-pu">P.U. Total: <span id="apu-pu-${idx}">$ 0</span> / <span id="apu-unid-lbl-${idx}">m³</span></div>
+    </div>`;
+  cont.appendChild(div);
+  addAPURow(idx); addAPURow(idx);
+}
+function delAPU(idx){ document.getElementById(`apu-${idx}`)?.remove(); }
+
+function addAPURow(apuId){
+  const ri=++apuRowIdx;
+  const tbody=document.getElementById(`apu-body-${apuId}`);
+  const tr=document.createElement('tr'); tr.id=`apu-row-${ri}`;
+  tr.setAttribute('data-apu',apuId);
+  tr.innerHTML=`
+    <td><input type="text" placeholder="Nombre del recurso"
+      oninput="onRecursoInput(this,${ri},${apuId})"></td>
+    <td>
+      <select onchange="recalcAPU(${apuId})">
+        <option>Materiales</option>
+        <option>Mano de Obra</option>
+        <option>Herramientas</option>
+        <option>Equipos</option>
+        <option>Subcontrato</option>
+      </select>
+    </td>
+    <td id="apu-unid-cell-${ri}">
+      <select id="apu-unid-sel-${ri}" onchange="recalcAPU(${apuId})">
+        ${UNID_APU.map(u=>`<option>${u}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" class="num-inp" id="apu-cant-${ri}" placeholder="1" min="0" step="any"
+      oninput="recalcAPURow(${ri},${apuId})"></td>
+    <td><input type="number" class="num-inp" id="apu-pu2-${ri}" placeholder="0" min="0" step="any"
+      oninput="recalcAPURow(${ri},${apuId})"></td>
+    <td class="sub-cell" id="apu-sub-${ri}">$ 0</td>
+    <td><button class="del-sub" onclick="delAPURow(${ri},${apuId})">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+
+/* Detectar palabra "pérdidas" en recurso de APU (fix #5) */
+function onRecursoInput(inputEl, ri, apuId){
+  if(esPerdida(inputEl.value)){
+    // cambiar unid a %
+    const sel=document.getElementById(`apu-unid-sel-${ri}`);
+    if(sel){ sel.value='%'; if(!sel.querySelector('option[value="%"]')){
+      const o=document.createElement('option'); o.value='%'; o.textContent='%'; sel.appendChild(o);
+    } sel.value='%'; }
+    // Calcular automáticamente: cant = %, aplicar sobre subtotal anterior
+    recalcAPU_perdida(ri, apuId);
+  } else {
+    recalcAPU(apuId);
+  }
+}
+
+/* Calcular pérdida: subtotal = pct% × subtotal de la fila inmediatamente anterior */
+function recalcAPU_perdida(ri, apuId){
+  const tbody=document.getElementById(`apu-body-${apuId}`); if(!tbody)return;
+  const rows=Array.from(tbody.querySelectorAll('tr'));
+  const idx=rows.findIndex(r=>r.id===`apu-row-${ri}`);
+  let prevSub=0;
+  if(idx>0){
+    const prevRi=rows[idx-1].id.replace('apu-row-','');
+    const subEl=document.getElementById(`apu-sub-${prevRi}`);
+    if(subEl) prevSub=parseCLP(subEl.textContent);
+  }
+  const pct=parseFloat(document.getElementById(`apu-cant-${ri}`)?.value)||0;
+  const val=prevSub*pct/100;
+  // P.U. no aplica para pérdidas (es %)
+  const puEl=document.getElementById(`apu-pu2-${ri}`);
+  if(puEl){ puEl.value=''; puEl.disabled=true; puEl.style.opacity='.4'; }
+  const subEl=document.getElementById(`apu-sub-${ri}`);
+  if(subEl) subEl.textContent=fmtCLP(val);
+  recalcAPU(apuId);
+}
+
+function delAPURow(ri,apuId){
+  document.getElementById(`apu-row-${ri}`)?.remove();
+  recalcAPU(apuId);
+}
+function recalcAPURow(ri,apuId){
+  const tr=document.getElementById(`apu-row-${ri}`); if(!tr)return;
+  const recursoEl=tr.querySelector('input[type=text]');
+  if(esPerdida(recursoEl?.value||'')){
+    recalcAPU_perdida(ri,apuId); return;
+  }
+  const cant=parseFloat(document.getElementById(`apu-cant-${ri}`)?.value)||0;
+  const pu=parseFloat(document.getElementById(`apu-pu2-${ri}`)?.value)||0;
+  const sub=document.getElementById(`apu-sub-${ri}`);
+  if(sub) sub.textContent=fmtCLP(cant*pu);
+  recalcAPU(apuId);
+}
+
+function parseCLP(str){
+  if(!str)return 0;
+  return parseFloat(String(str).replace(/\./g,'').replace(',','.').replace(/[^0-9.-]/g,''))||0;
+}
+
+function recalcAPU(apuId){
+  const tbody=document.getElementById(`apu-body-${apuId}`); if(!tbody)return;
+  let totalMO=0, totalMat=0, totalOtros=0;
+  const rows=Array.from(tbody.querySelectorAll('tr'));
+  rows.forEach((tr,idx)=>{
+    const recursoEl=tr.querySelector('input[type=text]');
+    const sel=tr.querySelector('select');
+    const ri=tr.id.replace('apu-row-','');
+    let val=0;
+    if(esPerdida(recursoEl?.value||'')){
+      // Ya calculado en recalcAPU_perdida; leer subtotal
+      val=parseCLP(document.getElementById(`apu-sub-${ri}`)?.textContent||'0');
+    } else {
+      const cant=parseFloat(document.getElementById(`apu-cant-${ri}`)?.value)||0;
+      const pu=parseFloat(document.getElementById(`apu-pu2-${ri}`)?.value)||0;
+      val=cant*pu;
+      const subEl=document.getElementById(`apu-sub-${ri}`);
+      if(subEl) subEl.textContent=fmtCLP(val);
+    }
+    const tipo=sel?sel.value:'';
+    if(tipo==='Mano de Obra') totalMO+=val;
+    else if(tipo==='Materiales') totalMat+=val;
+    else totalOtros+=val;
+  });
+  const lsPct=parseFloat(document.getElementById(`apu-ls-${apuId}`)?.value)||0;
+  const ls=totalMO*lsPct/100;
+  const pu=totalMO+totalMat+totalOtros+ls;
+  document.getElementById(`apu-pu-${apuId}`).textContent=fmtCLP(pu);
+}
+
+function updateAPULinks(){
+  document.querySelectorAll('[id^="apu-link-"]').forEach(sel=>{
+    const cur=sel.value; sel.innerHTML=getPartidaOptions(); sel.value=cur;
+  });
+}
+
+/* ══════════════════════════════════════════
+   CUBICACIONES
+══════════════════════════════════════════ */
+function addCubicacion(nombre=''){
+  const idx=++cubIdx;
+  const cont=document.getElementById('cub-container');
+  const div=document.createElement('div');
+  div.className='cub-block'; div.id=`cub-${idx}`;
+  div.innerHTML=`
+    <div class="cub-hdr">
+      <input type="text" placeholder="Nombre de la cubicación (ej: Excavaciones)" value="${nombre}">
+      <button class="del-cub" onclick="delCub(${idx})">✕</button>
+    </div>
+    <table class="cub-table">
+      <thead><tr>
+        <th>Elemento/Zona</th>
+        <th>Descripción</th>
+        <th style="width:80px">Largo(m)</th>
+        <th style="width:80px">Ancho(m)</th>
+        <th style="width:80px">Alto(m)</th>
+        <th style="width:70px">Factor</th>
+        <th style="width:85px">Cantidad</th>
+        <th style="width:70px">Unid.</th>
+        <th style="width:28px"></th>
+      </tr></thead>
+      <tbody id="cub-body-${idx}"></tbody>
+    </table>
+    <div style="padding:8px;background:#f0faf6;border-top:1px solid #b5dcc8">
+      <button class="add-sub-btn" style="border-color:var(--green);color:var(--green)"
+        onclick="addCubRow(${idx})">+ Agregar medición</button>
+    </div>
+    <div class="cub-footer">Total: <strong id="cub-total-${idx}">0</strong></div>`;
+  cont.appendChild(div);
+  addCubRow(idx); addCubRow(idx);
+}
+function delCub(idx){ document.getElementById(`cub-${idx}`)?.remove(); }
+function addCubRow(cubId){
+  const ri=++cubRowIdx;
+  const tbody=document.getElementById(`cub-body-${cubId}`);
+  const tr=document.createElement('tr'); tr.id=`cub-row-${ri}`;
+  tr.innerHTML=`
+    <td><input type="text" placeholder="Zona A"></td>
+    <td><input type="text" placeholder="Descripción"></td>
+    <td><input type="number" class="num-inp" placeholder="0" step="any" oninput="recalcCubRow(${ri},${cubId})"></td>
+    <td><input type="number" class="num-inp" placeholder="0" step="any" oninput="recalcCubRow(${ri},${cubId})"></td>
+    <td><input type="number" class="num-inp" placeholder="0" step="any" oninput="recalcCubRow(${ri},${cubId})"></td>
+    <td><input type="number" class="num-inp" placeholder="1" step="any" value="1" oninput="recalcCubRow(${ri},${cubId})"></td>
+    <td class="total-cell" id="cub-sub-${ri}">0</td>
+    <td>${mkSelect(UNID_PARTIDA,'m³')}</td>
+    <td><button class="del-sub" onclick="delCubRow(${ri},${cubId})">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+function delCubRow(ri,cubId){
+  document.getElementById(`cub-row-${ri}`)?.remove(); recalcCub(cubId);
+}
+function recalcCubRow(ri,cubId){
+  const tr=document.getElementById(`cub-row-${ri}`); if(!tr)return;
+  const ins=tr.querySelectorAll('input[type=number]');
+  const L=parseFloat(ins[0].value)||0;
+  const A=parseFloat(ins[1].value)||1;
+  const H=parseFloat(ins[2].value)||1;
+  const F=parseFloat(ins[3].value)||1;
+  const res=L*A*H*F;
+  document.getElementById(`cub-sub-${ri}`).textContent=fmtNum(res);
+  recalcCub(cubId);
+}
+function recalcCub(cubId){
+  const tbody=document.getElementById(`cub-body-${cubId}`); if(!tbody)return;
+  let total=0;
+  tbody.querySelectorAll('.total-cell').forEach(c=>{
+    total+=parseFloat(c.textContent.replace(/\./g,'').replace(',','.'))||0;
+  });
+  const el=document.getElementById(`cub-total-${cubId}`);
+  if(el) el.textContent=fmtNum(total);
+}
+
+/* ══════════════════════════════════════════
+   NÚMERO A LETRAS (fix #6)
+══════════════════════════════════════════ */
+function numeroALetras(n){
+  if(typeof n!=='number'||isNaN(n)||n<0)return 'CERO';
+  n=Math.round(n); if(n===0)return 'CERO';
+  const UNO=['','UN','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE',
+    'DIEZ','ONCE','DOCE','TRECE','CATORCE','QUINCE','DIECISÉIS','DIECISIETE','DIECIOCHO','DIECINUEVE'];
+  const DECA=['','','VEINTE','TREINTA','CUARENTA','CINCUENTA','SESENTA','SETENTA','OCHENTA','NOVENTA'];
+  const CENT=['','CIENTO','DOSCIENTOS','TRESCIENTOS','CUATROCIENTOS','QUINIENTOS',
+    'SEISCIENTOS','SETECIENTOS','OCHOCIENTOS','NOVECIENTOS'];
+  function g(n){
+    if(n===0)return '';
+    let r='';
+    if(n>=100){ r+=(n===100?'CIEN':CENT[Math.floor(n/100)])+' '; n%=100; }
+    if(n>=20){ r+=DECA[Math.floor(n/10)]+(n%10?' Y '+UNO[n%10]:'')+' '; }
+    else if(n>0){ r+=UNO[n]+' '; }
+    return r.trim();
+  }
+  if(n>=1e9){
+    const b=Math.floor(n/1e9);
+    const r=n%1e9;
+    return (b===1?'MIL MILLONES':g(b)+' MIL MILLONES')+(r?' '+numeroALetras(r):'');
+  }
+  if(n>=1e6){
+    const m=Math.floor(n/1e6);
+    const r=n%1e6;
+    return (m===1?'UN MILLÓN':g(m)+' MILLONES')+(r?' '+numeroALetras(r):'');
+  }
+  if(n>=1000){
+    const k=Math.floor(n/1000);
+    const r=n%1000;
+    return (k===1?'MIL':g(k)+' MIL')+(r?' '+g(r):'');
+  }
+  return g(n);
+}
+
+/* ══════════════════════════════════════════
+   RESUMEN EXPORTAR
+══════════════════════════════════════════ */
+function actualizarResumenExportar(){
+  const nAPU=document.querySelectorAll('.apu-block').length;
+  const nCub=document.querySelectorAll('.cub-block').length;
+  document.getElementById('lbl-apu').textContent=`APU (${nAPU} análisis)`;
+  document.getElementById('lbl-cub').textContent=`Cubicaciones (${nCub} secciones)`;
+  document.getElementById('resumen-datos').innerHTML=`
+    <b>Proyecto:</b> ${document.getElementById('p-nombre').value||'—'}<br>
+    <b>Mandante:</b> ${document.getElementById('p-mandante').value||'—'}<br>
+    <b>Ubicación:</b> ${document.getElementById('p-ubicacion').value||'—'}<br>
+    <b>Fecha:</b> ${document.getElementById('p-fecha').value||'—'}<br>
+    <b>Partidas:</b> ${document.querySelectorAll('.partida-block').length} &nbsp;|&nbsp;
+    <b>APU:</b> ${nAPU} &nbsp;|&nbsp; <b>Cubicaciones:</b> ${nCub}<br>
+    <b>Total General:</b> ${document.getElementById('t-total').textContent}`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   GENERAR PDF  — fix #1 numeración, fix #2 pie de página fijo
+══════════════════════════════════════════════════════════ */
+async function generarPDF(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210, H=297, ML=18, MT=18;
+  const CW=W-ML*2;
+
+  // Colores
+  const NAVY=[26,46,74], LBLUE=[214,228,247], ACCENT=[232,160,32],
+        MUTED=[107,122,141], GREEN=[45,122,90], LGREEN=[212,237,211];
+
+  const emp={
+    nombre:document.getElementById('e-nombre').value||'Constructora',
+    rut:document.getElementById('e-rut').value||'',
+    giro:document.getElementById('e-giro').value||'Construcción Civil · Chile',
+    dir:document.getElementById('e-dir').value||'',
+    tel:document.getElementById('e-tel').value||'',
+    email:document.getElementById('e-email').value||''
+  };
+  const proy={
+    nombre:document.getElementById('p-nombre').value||'Proyecto',
+    mandante:document.getElementById('p-mandante').value||'',
+    ubicacion:document.getElementById('p-ubicacion').value||'',
+    fecha:document.getElementById('p-fecha').value||'',
+    num:document.getElementById('p-num').value||'',
+    plazo:document.getElementById('p-plazo').value||'',
+    desc:document.getElementById('p-desc').value||''
+  };
+
+  // ── Pie de página (posición FIJA al fondo) ──────────
+  // fix #1 y #2: totalPages lo obtenemos al final via putTotalPages
+  doc.setProperties({title:proy.nombre});
+  // usamos alias {totalPages} que jsPDF reemplaza al guardar
+  function footer(pageNum){
+    const fy=H-10;
+    doc.setDrawColor(...LBLUE); doc.setLineWidth(0.25);
+    doc.line(ML,fy-3,W-ML,fy-3);
+    doc.setFontSize(6.5); doc.setTextColor(...MUTED); doc.setFont('helvetica','normal');
+    const pie=[emp.nombre,emp.rut?'RUT '+emp.rut:'',emp.dir,emp.tel,emp.email].filter(Boolean).join(' · ');
+    doc.text(pie,ML,fy,{maxWidth:CW-30});
+    doc.text(`Página ${pageNum}`,W-ML,fy,{align:'right'});
+  }
+
+  // Zona útil en Y: de MT+4 a H-18 (deja espacio para pie)
+  const YMAX=H-18;
+
+  let pageNum=0;
+
+  function newPage(){
+    if(pageNum>0) doc.addPage();
+    pageNum++;
+    return MT+4;
+  }
+
+  // ═════════════ PORTADA ═════════════
+  if(document.getElementById('inc-portada').checked){
+    let y=newPage();
+    // Imagen portada
+    if(portadaDataURL){
+      try{ doc.addImage(portadaDataURL,'JPEG',0,0,W,85); }catch(e){}
+      // overlay
+      doc.setFillColor(0,0,0); doc.setGlobalAlpha(0.40);
+      doc.rect(0,0,W,85,'F'); doc.setGlobalAlpha(1);
+    } else {
+      doc.setFillColor(...NAVY); doc.rect(0,0,W,85,'F');
+    }
+    // Logo empresa
+    if(logoDataURL){
+      try{ doc.addImage(logoDataURL,'PNG',ML,92,28,28); }catch(e){}
+    }
+    const lx=logoDataURL?ML+33:ML;
+    doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(...NAVY);
+    doc.text(emp.nombre.toUpperCase(),lx,98);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+    doc.text(emp.giro,lx,104);
+    // línea accent
+    doc.setDrawColor(...ACCENT); doc.setLineWidth(1.2);
+    doc.line(ML,112,W-ML,112); doc.setLineWidth(0.2);
+    // Título
+    doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(...NAVY);
+    doc.text('PRESUPUESTO DE OBRA',ML,126);
+    doc.setFontSize(14); doc.setTextColor(...ACCENT);
+    doc.text(proy.nombre,ML,137);
+    // Labels
+    const lbls=['MANDANTE','UBICACIÓN','FECHA','N° PRESUPUESTO'];
+    const vals=[proy.mandante,proy.ubicacion,proy.fecha,proy.num];
+    let cx=ML;
+    lbls.forEach((l,i)=>{
+      doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(...MUTED); doc.text(l,cx,154);
+      doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(...NAVY); doc.text(vals[i]||'—',cx,161);
+      cx+=CW/lbls.length;
+    });
+    if(proy.desc){
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+      const ls=doc.splitTextToSize(proy.desc,CW); doc.text(ls.slice(0,3),ML,174);
+    }
+    footer(pageNum);
+  }
+
+  // ═════════════ PRESUPUESTO ═════════════
+  if(document.getElementById('inc-presupuesto').checked){
+    let y=newPage();
+
+    function presHdrHoja(){
+      doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(...MUTED);
+      doc.text(emp.nombre.toUpperCase()+' · '+emp.giro,ML,y+4);
+      doc.setTextColor(...ACCENT); doc.text(proy.nombre,W-ML,y+4,{align:'right'});
+      y+=9;
+      doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(...NAVY);
+      doc.text('PRESUPUESTO DE OBRA',ML,y); y+=5;
+      doc.setDrawColor(...ACCENT); doc.setLineWidth(0.8); doc.line(ML,y,W-ML,y); doc.setLineWidth(0.2); y+=5;
+    }
+    function presTablaHdr(){
+      doc.setFillColor(...NAVY); doc.rect(ML,y,CW,6.5,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(7);
+      const cols=[
+        {t:'Ítem',x:ML+1},{t:'Descripción',x:ML+17},{t:'Unid.',x:ML+95,a:'center'},
+        {t:'Cantidad',x:ML+115,a:'right'},{t:'P. Unit.',x:ML+143,a:'right'},{t:'Total',x:W-ML-2,a:'right'}
+      ];
+      cols.forEach(c=>doc.text(c.t,c.x,y+4.5,{align:c.a||'left'}));
+      y+=7;
+    }
+    presHdrHoja(); presTablaHdr();
+
+    let odd=true;
+    document.querySelectorAll('.partida-block').forEach(pb=>{
+      if(y>YMAX){ footer(pageNum); y=newPage(); presTablaHdr(); }
+      const pId=pb.id.replace('partida-','');
+      const pDesc=document.getElementById(`p-desc-${pId}`)?.value||`Partida ${pId}`;
+      const pTot=document.getElementById(`ptotal-${pId}`)?.textContent||'$ 0';
+      // Fila partida
+      doc.setFillColor(...LBLUE); doc.rect(ML,y,CW,6.5,'F');
+      doc.setTextColor(...NAVY); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+      doc.text(`${pId}.-  ${pDesc}`,ML+1,y+4.5);
+      doc.text(pTot,W-ML-2,y+4.5,{align:'right'});
+      y+=7;
+      // Subpartidas
+      pb.querySelectorAll('tbody tr').forEach((tr,si)=>{
+        if(y>YMAX){ footer(pageNum); y=newPage(); presTablaHdr(); }
+        const inpAll=tr.querySelectorAll('input');
+        const inpNum=tr.querySelectorAll('input[type=number]');
+        const selEl=tr.querySelector('select');
+        const desc2=inpAll[0]?.value||'';
+        const unid=selEl?.value||'';
+        const cant=parseFloat(inpNum[0]?.value)||0;
+        const pu=parseFloat(inpNum[1]?.value)||0;
+        const tot=tr.querySelector('.total-cell')?.textContent||'$ 0';
+        const nr=`${pId}.${si+1}`;
+        doc.setFillColor(odd?255:248,odd?255:250,odd?255:253);
+        doc.rect(ML,y,CW,6,'F');
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...NAVY);
+        doc.text(nr,ML+2,y+4);
+        doc.text(doc.splitTextToSize(desc2,74)[0],ML+17,y+4);
+        doc.text(unid,ML+102,y+4,{align:'center'});
+        if(cant) doc.text(cant.toLocaleString('es-CL'),ML+143,y+4,{align:'right'});
+        if(pu) doc.text('$ '+pu.toLocaleString('es-CL'),ML+161,y+4,{align:'right'});
+        doc.text(tot,W-ML-2,y+4,{align:'right'});
+        y+=6.5; odd=!odd;
+      });
+    });
+
+    // Totales
+    y+=4;
+    if(y>YMAX-50){ footer(pageNum); y=newPage(); }
+    const TX=ML+CW*0.42; const TW=CW*0.58;
+    const tots=[
+      ['Costo Directo',document.getElementById('t-costo-directo').textContent],
+      [`Gastos Generales (${document.getElementById('gg-pct').value}%)`,document.getElementById('t-gg-val').textContent.replace(/[()]/g,'')],
+      [`Utilidad (${document.getElementById('util-pct').value}%)`,document.getElementById('t-util-val').textContent.replace(/[()]/g,'')],
+      ['Total Neto',document.getElementById('t-neto').textContent],
+      ['IVA (19%)',document.getElementById('t-iva').textContent],
+    ];
+    tots.forEach(([l,v])=>{
+      doc.setFillColor(...LBLUE); doc.rect(TX,y,TW,6,'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...NAVY);
+      doc.text(l,TX+2,y+4); doc.text(v,TX+TW-2,y+4,{align:'right'}); y+=6.5;
+    });
+    doc.setFillColor(...NAVY); doc.rect(TX,y,TW,8,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('TOTAL GENERAL',TX+2,y+5.5);
+    doc.text(document.getElementById('t-total').textContent,TX+TW-2,y+5.5,{align:'right'});
+    y+=11;
+    doc.setFont('helvetica','italic'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+    const sonTxt=document.getElementById('son-text').textContent;
+    doc.text(doc.splitTextToSize(sonTxt,TW),TX,y);
+    footer(pageNum);
+  }
+
+  // ═════════════ APU (una hoja por APU) ═════════════
+  if(document.getElementById('inc-apu').checked){
+    document.querySelectorAll('.apu-block').forEach((ab,ai)=>{
+      let y=newPage();
+      // Banda superior
+      doc.setFillColor(...NAVY); doc.rect(0,0,W,13,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+      doc.text('ANÁLISIS DE PRECIO UNITARIO',ML,8.5);
+      const apuName=ab.querySelector('.apu-hdr input')?.value||`APU ${ai+1}`;
+      doc.setTextColor(...ACCENT); doc.text(apuName,W-ML,8.5,{align:'right'});
+      y=20;
+      // Info
+      const apuId=ab.id.replace('apu-','');
+      const unidR=document.getElementById(`apu-runid-${apuId}`)?.value||'un';
+      const pu=document.getElementById(`apu-pu-${apuId}`)?.textContent||'$ 0';
+      const linkSel=document.getElementById(`apu-link-${apuId}`);
+      const linkedTxt=linkSel?linkSel.options[linkSel.selectedIndex]?.text||'—':'—';
+      doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...NAVY);
+      doc.text(`Vinculado a: ${linkedTxt}   |   Unidad resultado: ${unidR}`,ML,y); y+=8;
+      // Cabecera tabla
+      doc.setFillColor(...NAVY); doc.rect(ML,y,CW,6.5,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(7);
+      [{t:'Recurso',x:ML+1},{t:'Tipo',x:ML+64},{t:'Unid.',x:ML+100},{t:'Rend./Cant.',x:ML+118,a:'right'},{t:'P.U.',x:ML+146,a:'right'},{t:'Subtotal',x:W-ML-2,a:'right'}]
+        .forEach(c=>doc.text(c.t,c.x,y+4.5,{align:c.a||'left'}));
+      y+=7;
+      // Filas
+      let odd2=true;
+      ab.querySelectorAll('tbody tr').forEach(tr=>{
+        if(y>YMAX){ footer(pageNum); y=newPage(); }
+        const ri=tr.id.replace('apu-row-','');
+        const recurso=tr.querySelector('input[type=text]')?.value||'';
+        const tipo=tr.querySelector('select')?.value||'';
+        const unidSel=document.getElementById(`apu-unid-sel-${ri}`)?.value||'';
+        const cant=document.getElementById(`apu-cant-${ri}`)?.value||'';
+        const puV=document.getElementById(`apu-pu2-${ri}`)?.value||'';
+        const sub=document.getElementById(`apu-sub-${ri}`)?.textContent||'$ 0';
+        doc.setFillColor(odd2?255:248,odd2?255:250,odd2?255:253);
+        doc.rect(ML,y,CW,6,'F');
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...NAVY);
+        doc.text(recurso,ML+1,y+4);
+        doc.setTextColor(...MUTED); doc.text(tipo,ML+64,y+4);
+        doc.setTextColor(...NAVY); doc.text(unidSel,ML+100,y+4);
+        if(cant) doc.text(Number(cant).toLocaleString('es-CL'),ML+155,y+4,{align:'right'});
+        if(puV) doc.text('$ '+Number(puV).toLocaleString('es-CL'),ML+173,y+4,{align:'right'});
+        doc.text(sub,W-ML-2,y+4,{align:'right'});
+        y+=6.5; odd2=!odd2;
+      });
+      // LS y PU total
+      y+=3;
+      const lsPct=document.getElementById(`apu-ls-${apuId}`)?.value||'23.3';
+      doc.setFillColor(...LBLUE); doc.rect(ML,y,CW,6,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...NAVY);
+      doc.text(`Leyes Sociales Mano de Obra (${lsPct}%)`,ML+1,y+4); y+=7;
+      doc.setFillColor(...NAVY); doc.rect(ML,y,CW,8,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.text(`PRECIO UNITARIO TOTAL  /  ${unidR}`,ML+2,y+5.5);
+      doc.text(pu,W-ML-2,y+5.5,{align:'right'});
+      footer(pageNum);
+    });
+  }
+
+  // ═════════════ CUBICACIONES ═════════════
+  if(document.getElementById('inc-cubicaciones').checked){
+    document.querySelectorAll('.cub-block').forEach((cb,ci)=>{
+      let y=newPage();
+      doc.setFillColor(...GREEN); doc.rect(0,0,W,13,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+      doc.text('CUBICACIÓN / MEDICIÓN',ML,8.5);
+      const cubName=cb.querySelector('.cub-hdr input')?.value||`Cubicación ${ci+1}`;
+      doc.setTextColor(255,240,150); doc.text(cubName,W-ML,8.5,{align:'right'});
+      y=20;
+      // Cabecera
+      doc.setFillColor(...GREEN); doc.rect(ML,y,CW,6.5,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(6.5);
+      const cc=['Elemento/Zona','Descripción','Largo','Ancho','Alto','Factor','Cantidad','Unid.'];
+      const cx=[ML+1,ML+30,ML+82,ML+102,ML+120,ML+138,ML+156,ML+172];
+      cc.forEach((t,i)=>doc.text(t,cx[i],y+4.5));
+      y+=7;
+      let odd3=true;
+      cb.querySelectorAll('tbody tr').forEach(tr=>{
+        if(y>YMAX){ footer(pageNum); y=newPage(); }
+        const ins=tr.querySelectorAll('input');
+        const selEl=tr.querySelector('select');
+        const tot3=tr.querySelector('.total-cell')?.textContent||'0';
+        doc.setFillColor(odd3?255:246,odd3?255:252,odd3?255:249);
+        doc.rect(ML,y,CW,6,'F');
+        doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...NAVY);
+        doc.text(ins[0]?.value||'',cx[0],y+4);
+        doc.text(doc.splitTextToSize(ins[1]?.value||'',28)[0],cx[1],y+4);
+        [2,3,4,5].forEach(i=>{
+          const v=parseFloat(ins[i]?.value)||0;
+          if(v) doc.text(v.toLocaleString('es-CL'),cx[i+1]+18,y+4,{align:'right'});
+        });
+        doc.text(tot3,cx[6]+18,y+4,{align:'right'});
+        doc.text(selEl?.value||'',cx[7],y+4);
+        y+=6.5; odd3=!odd3;
+      });
+      y+=3;
+      const cubId=cb.id.replace('cub-','');
+      const totalCub=document.getElementById(`cub-total-${cubId}`)?.textContent||'0';
+      doc.setFillColor(...GREEN); doc.rect(ML,y,CW,7,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+      doc.text('TOTAL CUBICACIÓN:',ML+2,y+5);
+      doc.text(totalCub,W-ML-2,y+5,{align:'right'});
+      footer(pageNum);
+    });
+  }
+
+  // ═════════════ FIRMAS ═════════════
+  if(document.getElementById('inc-firmas').checked){
+    let y=newPage();
+    doc.setFillColor(...NAVY); doc.rect(0,0,W,13,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+    doc.text('FIRMAS Y APROBACIÓN',ML,8.5);
+    doc.setTextColor(...ACCENT); doc.text(proy.nombre,W-ML,8.5,{align:'right'});
+    y=22;
+    // Notas
+    const notas=document.getElementById('f-notas').value;
+    if(notas){
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+      const nl=doc.splitTextToSize(notas,CW); doc.text(nl.slice(0,6),ML,y); y+=nl.slice(0,6).length*4.5+6;
+    }
+    // Resumen
+    doc.setFillColor(...LBLUE); doc.rect(ML,y,CW,30,'F');
+    const rf=[['Proyecto',proy.nombre],['Mandante',proy.mandante],['Ubicación',proy.ubicacion],
+              ['Fecha',proy.fecha],['Total General',document.getElementById('t-total').textContent]];
+    let ry=y+6;
+    rf.forEach(([l,v])=>{
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...NAVY); doc.text(l+':',ML+4,ry);
+      doc.setFont('helvetica','normal'); doc.text(v||'—',ML+38,ry); ry+=5;
+    });
+    y+=35;
+    // Cuadros firma
+    const FW=(CW-20)/2;
+    function drawFirma(fx,fy,titulo,nombre,rut,cargo){
+      doc.setDrawColor(...MUTED); doc.setLineWidth(0.3);
+      doc.rect(fx,fy,FW,55,'S');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+      doc.text(titulo.toUpperCase(),fx+FW/2,fy+7,{align:'center'});
+      doc.setDrawColor(...NAVY); doc.setLineWidth(0.7);
+      doc.line(fx+8,fy+38,fx+FW-8,fy+38); doc.setLineWidth(0.2);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...NAVY);
+      doc.text(nombre||'__________________________',fx+FW/2,fy+44,{align:'center'});
+      if(rut){ doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.text('RUT: '+rut,fx+FW/2,fy+49,{align:'center'}); }
+      if(cargo){ doc.setFont('helvetica','italic'); doc.setFontSize(7); doc.setTextColor(...MUTED); doc.text(cargo,fx+FW/2,fy+54,{align:'center'}); }
+    }
+    drawFirma(ML,y,'Representante Legal',
+      document.getElementById('f-rl-nombre').value,
+      document.getElementById('f-rl-rut').value,
+      document.getElementById('f-rl-cargo').value);
+    drawFirma(ML+FW+20,y,'Profesional a Cargo',
+      document.getElementById('f-pc-nombre').value,
+      document.getElementById('f-pc-rut').value,
+      document.getElementById('f-pc-titulo').value);
+    footer(pageNum);
+  }
+
+  // Guardar
+  const nombre=(proy.nombre||'Presupuesto').replace(/\s+/g,'_');
+  doc.save(`${nombre}_${new Date().toISOString().slice(0,10)}.pdf`);
+  notify(`PDF generado (${pageNum} páginas) ✓`);
+}
+
+/* ══════════════════════════════════════════
+   NOTIF
+══════════════════════════════════════════ */
+function notify(msg){
+  const n=document.getElementById('notif');
+  n.textContent=msg; n.classList.add('show');
+  setTimeout(()=>n.classList.remove('show'),3000);
+}
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded',()=>{
+  cargarEmpresa();
+  document.getElementById('p-fecha').value=new Date().toISOString().slice(0,10);
+  addPartida(); addAPU(); addCubicacion();
+});
+</script>
+</body>
+</html>

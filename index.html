@@ -811,17 +811,17 @@ function openTof(id){
 }
 function renderTof(id){
   let rows=tofData[id],it=items.find(x=>x.id===id);
-  let html=`<div class="tof-hdr"><span>Descripción / Eje</span><span>Cant.</span><span>Ancho</span><span>Largo</span><span>Alto</span><span>Total</span><span></span></div>`;
+  let html=`<div class="tof-hdr"><span style="flex:3">Descripción / Eje</span><span style="flex:1">Cant.</span><span style="flex:1">Ancho</span><span style="flex:1">Largo</span><span style="flex:1">Alto</span><span style="flex:1.2">Total</span><span style="flex:0.5"></span></div>`;
   rows.forEach((r,ri)=>{
     let tot=N(r.n)*Math.max(1,N(r.a))*Math.max(1,N(r.l))*Math.max(1,N(r.h));
-    html+=`<div class="tof-row">
-      <input value="${esc(r.desc)}" oninput="utof('${id}',${ri},'desc',this.value)"/>
-      <input class="r" type="text" value="${fmtQ(N(r.n))}" oninput="utof('${id}',${ri},'n',this.value)" onfocus="this.select()"/>
-      <input class="r" type="text" value="${fmtQ(N(r.a))}" oninput="utof('${id}',${ri},'a',this.value)" onfocus="this.select()"/>
-      <input class="r" type="text" value="${fmtQ(N(r.l))}" oninput="utof('${id}',${ri},'l',this.value)" onfocus="this.select()"/>
-      <input class="r" type="text" value="${fmtQ(N(r.h))}" oninput="utof('${id}',${ri},'h',this.value)" onfocus="this.select()"/>
-      <div class="st" id="tof-sub-${id}-${ri}">${fmtQ(tot)}</div>
-      <button class="bs del" onclick="dtof('${id}',${ri})">×</button></div>`;
+    html+=`<div class="tof-row" style="display:flex;gap:5px">
+      <input style="flex:3" value="${esc(r.desc)}" oninput="utof('${id}',${ri},'desc',this.value)"/>
+      <input class="r" type="text" value="${fmtQ(N(r.n))}" style="flex:1" oninput="utof('${id}',${ri},'n',this.value)" onfocus="this.select()"/>
+      <input class="r" type="text" value="${fmtQ(N(r.a))}" style="flex:1" oninput="utof('${id}',${ri},'a',this.value)" onfocus="this.select()"/>
+      <input class="r" type="text" value="${fmtQ(N(r.l))}" style="flex:1" oninput="utof('${id}',${ri},'l',this.value)" onfocus="this.select()"/>
+      <input class="r" type="text" value="${fmtQ(N(r.h))}" style="flex:1" oninput="utof('${id}',${ri},'h',this.value)" onfocus="this.select()"/>
+      <div class="st" style="flex:1.2" id="tof-sub-${id}-${ri}">${fmtQ(tot)}</div>
+      <button class="bs del" style="flex:0.5" onclick="dtof('${id}',${ri})">×</button></div>`;
   });
   let total=rows.reduce((x,r)=>x+(N(r.n)*Math.max(1,N(r.a))*Math.max(1,N(r.l))*Math.max(1,N(r.h))),0);
   html+=`<button class="bs addp" style="margin:10px" onclick="atof('${id}')">+ Agregar Fila</button>
@@ -833,6 +833,7 @@ function renderTof(id){
 }
 function atof(id){tofData[id].push({desc:'',n:1,a:1,l:1,h:1});renderTof(id);markUnsaved();}
 function utof(id,ri,f,v){
+  if((f==='n'||f==='a'||f==='l'||f==='h') && v.includes('.')){ v=''; }
   if(f==='n'||f==='a'||f==='l'||f==='h') v=N(v.replace(/\./g,'').replace(',','.'));
   tofData[id][ri][f]=v;
   let r=tofData[id][ri];
@@ -1082,7 +1083,7 @@ function openSettings(){
     /* EMPRESA */
     '<div class="cfg-section"><h4>Empresa Constructora</h4><div class="cfg-grid">'+
       '<div class="cfg-field"><label>Nombre</label><input value="'+esc(CFG.companyName)+'" oninput="CFG.companyName=this.value;saveCFG();updBrand()"/></div>'+
-      '<div class="cfg-field"><label>Tagline</label><input value="'+esc(CFG.companyTagline)+'" oninput="CFG.companyTagline=this.value;saveCFG()"/></div>'+
+      '<div class="cfg-field"><label>Rubro</label><input value="'+esc(CFG.companyTagline)+'" oninput="CFG.companyTagline=this.value;saveCFG()"/></div>'+
       '<div class="cfg-field"><label>Dirección</label><input value="'+esc(CFG.companyAddress)+'" oninput="CFG.companyAddress=this.value;saveCFG()"/></div>'+
       '<div class="cfg-field"><label>Teléfono / Celular</label><input value="'+esc(CFG.companyPhone)+'" oninput="CFG.companyPhone=this.value;saveCFG()"/></div>'+
       '<div class="cfg-field"><label>Email</label><input value="'+esc(CFG.companyEmail)+'" oninput="CFG.companyEmail=this.value;saveCFG()"/></div>'+

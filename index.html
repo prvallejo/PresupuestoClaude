@@ -738,14 +738,15 @@ function uapu(id,si,ri,f,v){
   if(f==='qty'||f==='price') v=N(v.replace(/\./g,'').replace(',','.'));
   let a=apuData[id],r=a.secs[si].rows[ri];
   r[f]=v;
-    if(f==='desc' && v.toUpperCase()==='J'){
+        if(f==='desc' && si===0 && v.length===1){
     let found=null;
+    let searchChar = v.toLowerCase();
     for(let k in apuData){
-      for(let s of apuData[k].secs){
-        for(let row of s.rows){
-          if(row.desc.toLowerCase()==='jornal'){ found=row; break; }
+      let moRows = apuData[k].secs[0].rows; // Solo Mano de Obra
+      for(let row of moRows){
+        if(row.desc.toLowerCase().startsWith(searchChar) && row.desc.length > 1){
+          found = row; break;
         }
-        if(found)break;
       }
       if(found)break;
     }

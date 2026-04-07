@@ -534,7 +534,8 @@ function initEvents(){
   document.getElementById('brows').addEventListener('input',function(e){
     var inp=e.target;if(!inp.dataset||!inp.dataset.field)return;
     var id=inp.dataset.id,f=inp.dataset.field,v=inp.value;
-    if(f==='qty'||f==='price') v=N(v.replace(/\./g,'').replace(',','.'));
+    if(f==='qty' && v.includes('.')){ v=''; alert('Use coma para decimales, no punto.'); }
+  if(f==='qty'||f==='price') v=N(v.replace(/\./g,'').replace(',','.'));
     items=items.map(function(x){if(x.id!==id)return x;var o=Object.assign({},x);o[f]=v;return o;});
     var ct=ctotals();
     items.forEach(function(it){
@@ -733,9 +734,26 @@ function renderApuEdit(id){
 }
 function aapu(id,si){apuData[id].secs[si].rows.push({desc:'',unit:'',qty:1,price:0});renderApuEdit(id);markUnsaved();}
 function uapu(id,si,ri,f,v){
+  if(f==='qty' && v.includes('.')){ v=''; alert('Use coma para decimales, no punto.'); }
   if(f==='qty'||f==='price') v=N(v.replace(/\./g,'').replace(',','.'));
   let a=apuData[id],r=a.secs[si].rows[ri];
   r[f]=v;
+    if(f==='desc' && v.toUpperCase()==='J'){
+    let found=null;
+    for(let k in apuData){
+      for(let s of apuData[k].secs){
+        for(let row of s.rows){
+          if(row.desc.toLowerCase()==='jornal'){ found=row; break; }
+        }
+        if(found)break;
+      }
+      if(found)break;
+    }
+    if(found){
+      r.desc=found.desc; r.unit=found.unit; r.price=found.price;
+      renderApuEdit(id); return;
+    }
+  }
   if(f==='desc'&&(v.toLowerCase().includes('perdida')||v.toLowerCase().includes('pérdida'))){
     r.unit='%';
     if(ri>0){let prev=a.secs[si].rows[ri-1];let prevSubtotal=N(prev.qty)*N(prev.price);if(r.qty===0||r.qty===1)r.qty=10;r.price=prevSubtotal/100;}

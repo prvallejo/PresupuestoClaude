@@ -414,6 +414,7 @@ const CFG_DEF = {
   pageSize:'letter', apuPrintMode:'continuo', cubPrintMode:'continuo',
   autoSave:true, autoSaveInterval:300, ggProrrateado:false, utilProrrateado:false, impProrrateado:false,
   impPorApu:false, impVisible:false,
+  warnOnOverwrite:true,
   /* campos proyecto en CFG */
   projObra:'', projMandante:'', projUbicacion:'', projProfesional:'', projFecha:''
 };
@@ -534,6 +535,23 @@ function initEvents(){
   document.getElementById('brows').addEventListener('input',function(e){
     var inp=e.target;if(!inp.dataset||!inp.dataset.field)return;
     var id=inp.dataset.id,f=inp.dataset.field,v=inp.value;
+    var it = items.find(x => x.id === id);
+    if (CFG.warnOnOverwrite && it) {
+      if (f === 'qty' && it.isCub) {
+        if (!confirm('Esta partida tiene cubicación. Si sobrescribe la borrará. ¿Continuar?')) {
+          inp.value = fmtQ(N(it.qty)); return;
+        } else {
+          it.isCub = false; delete tofData[id]; rb();
+        }
+      }
+      if (f === 'price' && it.isApu) {
+        if (!confirm('Esta partida tiene APU. Si sobrescribe la borrará. ¿Continuar?')) {
+          inp.value = fmtP(N(it.price)); return;
+        } else {
+          it.isApu = false; delete apuData[id]; rb();
+        }
+      }
+    }
     if(f==='qty' && v.includes('.')){ v=''; alert('Use coma para decimales, no punto.'); }
   if(f==='qty'||f==='price') v=N(v.replace(/\./g,'').replace(',','.'));
     items=items.map(function(x){if(x.id!==id)return x;var o=Object.assign({},x);o[f]=v;return o;});
@@ -1098,6 +1116,11 @@ function openSettings(){
     '<div class="cfg-section"><h4>Guardado Automático</h4><div class="cfg-grid">'+
       '<label class="chk-opt"><input type="checkbox" '+(CFG.autoSave?'checked':'')+' onchange="CFG.autoSave=this.checked;saveCFG();setupAutoSave()"> Activar Guardado Automático</label>'+
       '<div class="cfg-field"><label>Intervalo (segundos)</label><input type="number" value="'+CFG.autoSaveInterval+'" oninput="CFG.autoSaveInterval=N(this.value);saveCFG();setupAutoSave()" onfocus="this.select()"/></div>'+
+    '</div></div>'+
+
+        /* PROTECCIÓN */
+    '<div class="cfg-section"><h4>Protección de Datos</h4><div class="chk-opts">'+
+      '<label class="chk-opt"><input type="checkbox" '+(CFG.warnOnOverwrite?'checked':'')+' onchange="CFG.warnOnOverwrite=this.checked;saveCFG()"> Avisar al sobrescribir Cubicaciones/APU</label>'+
     '</div></div>'+
 
     /* PRORRATEO */

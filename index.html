@@ -291,6 +291,13 @@ body{font-family:var(--ff);color:var(--txt);font-size:13px;background:var(--bg3)
   <main class="content">
     <!-- PANEL PRESUPUESTO -->
     <div id="p-bud" class="pnl on">
+      <input type="hidden" id="pObra" value=""/>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:15px;background:var(--bg);padding:12px;border-radius:10px;border:1px solid var(--border)" class="no-print">
+        <div class="cfg-field"><label>Mandante</label><input id="pMandante" placeholder="Cliente..." oninput="markUnsaved()"/></div>
+        <div class="cfg-field"><label>Ubicación</label><input id="pUbicacion" placeholder="Ciudad..." oninput="markUnsaved()"/></div>
+        <div class="cfg-field"><label>Profesional</label><input id="pProfesional" placeholder="Nombre..." oninput="markUnsaved()"/></div>
+        <div class="cfg-field"><label>Fecha</label><input id="pFecha" type="date" oninput="markUnsaved()"/></div>
+      </div>
       <div class="tbl-wrap">
         <div class="tbl-hdr">
           <span>Ítem</span><span>Descripción</span><span>Unid</span><span class="r">Cant.</span><span class="r">P. Unit.</span><span class="r">Total</span><span class="r"></span>
@@ -1033,6 +1040,10 @@ function refreshCubTab(){
 function showApp(){
   document.getElementById('wow-screen').style.display='none';
   document.getElementById('main-app').style.display='flex';
+}
+function hideApp(){
+  document.getElementById('wow-screen').style.display='flex';
+  document.getElementById('main-app').style.display='none';
 }
 
 /* ── EXPORT XLSX ── */
